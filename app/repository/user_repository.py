@@ -3,7 +3,7 @@ from typing import Dict
 from uuid import uuid4
 import aiomysql
 from passlib.context import CryptContext
-from app.schema import GetUserPost, UserPost, UserRequest
+from app.schema import GetUserPost, PostComments, PostLikes, UserPost, UserRequest
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -131,6 +131,99 @@ async def get_user_post(user_body : GetUserPost,db_pool) -> Dict[str,str] :
                     row = await cursor.fetchall()
                 else :
                     await cursor.execute(query)
+                    row = await cursor.fetchall()
+    
+        print('row',row)
+                
+        return {'error' : None,'data': row}
+    except Exception as e:
+        return {'error' : str(e),'data': None}  
+    
+
+async def post_likes(user_body : PostLikes,db_pool) -> Dict[str,str] :
+
+    select_query = """
+    SELECT *
+        FROM post_likes where user_id = %s and post_id = %s
+    """ 
+    try:
+        async with db_pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:
+                        await cursor.execute(select_query, (user_body.user_id, user_body.post_id))
+                        row = await cursor.fetchall()
+        print('row',row)
+        if row is not None :
+            return {'error' : 'Already Liked','data': None} 
+    except Exception as e:
+        print('e',e)
+    
+    
+    
+    query = """
+    INSERT INTO post_likes (post_id,user_id)
+    VALUES (%s, %s)
+    """
+
+    values = (user_body.post_id,user_body.user_id)
+
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(query, values)
+                
+        return {'error' : None,'data': user_body}
+    except Exception as e:
+        return {'error' : str(e),'data': None} 
+
+
+async def get_post_likes(user_body : PostLikes,db_pool) -> Dict[str,str] : 
+    query = """
+    SELECT *
+        FROM post_likes where post_id = %s
+    """
+
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                    await cursor.execute(query, (user_body.post_id,))
+                    row = await cursor.fetchall()
+    
+        print('row',row)
+                
+        return {'error' : None,'data': row}
+    except Exception as e:
+        return {'error' : str(e),'data': None}   
+    
+
+async def post_comments(user_body : PostComments,db_pool) -> Dict[str,str] : 
+    
+    query = """
+    INSERT INTO post_comments (post_id,user_id,comments)
+    VALUES (%s, %s, %s)
+    """
+
+    values = (user_body.post_id,user_body.user_id,user_body.comment)
+
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(query, values)
+                
+        return {'error' : None,'data': user_body}
+    except Exception as e:
+        return {'error' : str(e),'data': None} 
+
+
+async def get_post_comment(user_body : PostComments,db_pool) -> Dict[str,str] : 
+    query = """
+    SELECT *
+        FROM post_comments where post_id = %s
+    """
+
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                    await cursor.execute(query, (user_body.post_id,))
                     row = await cursor.fetchall()
     
         print('row',row)
