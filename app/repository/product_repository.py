@@ -15,11 +15,11 @@ async def add_products(user_body : ProductsRequest,db_pool) -> Dict[str,str] :
     manufacturer_address ,
     product_image_url ,
     product_price ,
-    stocks )
-    VALUES (%s, %s, %s,%s, %s, %s,%s, %s,%s)
+    stocks,market_id )
+    VALUES (%s, %s, %s,%s, %s, %s,%s, %s,%s,%s)
     """
 
-    values = (product_id,user_body.user_id,user_body.product_name,user_body.product_description,user_body.manufacturer_name,user_body.manufacturer_address,user_body.product_image_url,user_body.product_price,user_body.stocks)
+    values = (product_id,user_body.user_id,user_body.product_name,user_body.product_description,user_body.manufacturer_name,user_body.manufacturer_address,user_body.product_image_url,user_body.product_price,user_body.stocks,user_body.market_id)
 
     try:
         async with db_pool.acquire() as conn:

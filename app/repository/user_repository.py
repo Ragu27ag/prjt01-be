@@ -31,15 +31,15 @@ async def create_users(user_body : UserRequest,db_pool) -> Dict[str,str] :
                 await cursor.execute(select_query, (email,))
                 row = await cursor.fetchone()
     print('row',row)
-    if len(row) > 0 :
-        return {'error' : 'User Already Exist','data': None}
+    if row is not None :
+        return {'error' : 'Email already exists','data': None}
     
     user_id = str(uuid4())
     print('user id',user_id)
     hashed_password = hash_password(user_body.password)
     
     query = """
-    INSERT INTO users (id, user_name, email, password, mobile_number, profile_picture)
+    INSERT INTO users (user_id, user_name, email, password, mobile_number, profile_picture)
     VALUES (%s, %s, %s, %s, %s, %s)
     """
 
@@ -65,23 +65,43 @@ async def login_user(user_body : UserRequest,db_pool) -> Dict[str,str] :
     email = user_body.email
     try:
         async with db_pool.acquire() as conn:
-            async with conn.cursor() as cursor:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
                 await cursor.execute(query, (email,))
-                row = await cursor.fetchone()
+                row = await cursor.fetchall()
 
-        ver = verify_password(user_body.password,row[3])
+                print('row',row)
 
-        if(ver) :
-            val = {
-                    "id": row[0],
-                    "user_name": row[1],
-                    "email": row[2],
-                    "mobile_number": row[4],
-                    "profile_picture": row[5],
-            }
-            return {'error' : None,'data': json.dumps(val)}
+                if not row :
+                    return {'error' : "User doesn't exist. Signup to continue" ,'data': None}
+
+        ver = verify_password(user_body.password,row[0]['password'])
+
+        if ver :
+            return {'error' : None,'data': row}
         else : 
-            return {'error' : 'Invalid Password' ,'data': None}
+             return {'error' : 'Invalid Password' ,'data': None}
+    except Exception as e:
+        return {'error' : str(e),'data': None}
+    
+
+async def get_user(user_body : UserRequest,db_pool) -> Dict[str,str] : 
+
+    query = """
+    SELECT *
+        FROM users
+        WHERE user_id = %s
+    """
+    
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute(query, (user_body.user_id,))
+                row = await cursor.fetchall()
+
+                print('row',row)
+
+            return {'error' : None,'data': row}
+       
     except Exception as e:
         return {'error' : str(e),'data': None}
     
@@ -92,11 +112,11 @@ async def user_post(user_body : UserPost,db_pool) -> Dict[str,str] :
     print('user id',post_id)
     
     query = """
-    INSERT INTO posts (post_id,user_id,post_type ,post_url,post_description)
-    VALUES (%s, %s, %s, %s, %s)
+    INSERT INTO posts (post_id,user_id,post_type ,post_url,post_description,market_id)
+    VALUES (%s, %s, %s, %s, %s,%s)
     """
 
-    values = (post_id,user_body.user_id,user_body.post_type,user_body.post_url,user_body.post_description)
+    values = (post_id,user_body.user_id,user_body.post_type,user_body.post_url,user_body.post_description,user_body.market_id)
 
     try:
         async with db_pool.acquire() as conn:
@@ -114,12 +134,12 @@ async def get_user_post(user_body : GetUserPost,db_pool) -> Dict[str,str] :
 
     if user_body.user_id is None :
         query = """
-        SELECT post_id,user_id,post_type ,post_url,post_description, DATE_FORMAT(created_at, '%%Y-%%m-%%dT%%H:%%i:%%s') AS created_at
+        SELECT post_id,user_id,post_type ,post_url,post_description, DATE_FORMAT(created_at, '%d/%m/%y %H:%i:%s')  AS created_at
          FROM posts
         """
     else :
          query = """
-        SELECT post_id,user_id,post_type ,post_url,post_description, DATE_FORMAT(created_at, '%%Y-%%m-%%dT%%H:%%i:%%s') AS created_at
+        SELECT post_id,user_id,post_type ,post_url,post_description, DATE_FORMAT(created_at, '%d/%m/%y %H:%i:%s')  AS created_at
         FROM posts where user_id = %s
         """
 
@@ -152,8 +172,15 @@ async def post_likes(user_body : PostLikes,db_pool) -> Dict[str,str] :
                         await cursor.execute(select_query, (user_body.user_id, user_body.post_id))
                         row = await cursor.fetchall()
         print('row',row)
-        if row is not None :
-            return {'error' : 'Already Liked','data': None} 
+        if row  :
+            delete_query = """
+            delete
+                FROM post_likes where user_id = %s and post_id = %s
+            """  
+            async with db_pool.acquire() as conn:
+                    async with conn.cursor() as cursor:
+                        await cursor.execute(delete_query, (user_body.user_id, user_body.post_id))
+            return {'error' : None,'data': user_body}
     except Exception as e:
         print('e',e)
     
@@ -179,7 +206,26 @@ async def post_likes(user_body : PostLikes,db_pool) -> Dict[str,str] :
 async def get_post_likes(user_body : PostLikes,db_pool) -> Dict[str,str] : 
     query = """
     SELECT *
-        FROM post_likes where post_id = %s
+        FROM post_likes where  user_id = %s
+    """
+
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                    await cursor.execute(query, (user_body.user_id,))
+                    row = await cursor.fetchall()
+    
+        print('row',row)
+                
+        return {'error' : None,'data': row}
+    except Exception as e:
+        return {'error' : str(e),'data': None}   
+    
+
+async def get_post_likes_count(user_body : PostLikes,db_pool) -> Dict[str,str] : 
+    query = """
+    SELECT *
+        FROM post_likes where post_id = %s 
     """
 
     try:
