@@ -39,11 +39,11 @@ async def create_users(user_body : UserRequest,db_pool) -> Dict[str,str] :
     hashed_password = hash_password(user_body.password)
     
     query = """
-    INSERT INTO users (user_id, user_name, email, password, mobile_number, profile_picture)
-    VALUES (%s, %s, %s, %s, %s, %s)
+    INSERT INTO users (user_id, user_name, email, password, mobile_number, profile_picture,customer_type,proof_of_verification,gender)
+    VALUES (%s, %s, %s, %s, %s, %s,%s,%s,%s)
     """
 
-    values = (user_id,user_body.user_name,user_body.email,hashed_password,user_body.mobile_number,user_body.profile_picture)
+    values = (user_id,user_body.user_name,user_body.email,hashed_password,user_body.mobile_number,user_body.profile_picture,user_body.customer_type,user_body.proof_of_verification,user_body.gender)
 
     try:
         async with db_pool.acquire() as conn:

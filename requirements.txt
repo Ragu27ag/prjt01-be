@@ -5,3 +5,5 @@ dotenv
 pydantic
 passlib[bcrypt]
 cryptography
+easyocr
+httpx

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import json
+from app.service.ocrservice import identify_gender
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
@@ -18,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 
-from app.schema import GetUserPost, MarketRequest, OrdersRequest, PostComments, PostLikes, ProductsRatingRequest, ProductsRequest, UserPost, UserRequest
+from app.schema import GetUserPost, ImageData, MarketRequest, OrdersRequest, PostComments, PostLikes, ProductsRatingRequest, ProductsRequest, UserPost, UserRequest
 load_dotenv()
 
 
@@ -538,13 +539,38 @@ async def get_order(user_body:OrdersRequest) :
             "message": res['error'],
         }
     )
+      
+      
+@app.post('/api/v1/validate-proof')
+async def get_order(imageData : ImageData) :
+    res = await identify_gender(imageData)
+
+
+    if res['error'] is None :
+       return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Posts",
+            "data":res
+        }
+    )
+    else : 
+      return JSONResponse(
+        status_code=422,
+        content={
+            "error": "InvalidInput",
+            "message": res['error'],
+        }
+    )
+
+
 
 
 
 @app.get('/api/v1/create-tables')
 async def create_tables():
     tables = {
-        'users' : '''create table if not exists users (user_id CHAR(36) PRIMARY KEY,user_name VARCHAR(100) , email VARCHAR(100) , password VARCHAR(100) , mobile_number VARCHAR(10) , profile_picture VARCHAR(1000))''',
+        'users' : '''create table if not exists users (user_id CHAR(36) PRIMARY KEY,user_name VARCHAR(100) , email VARCHAR(100) , password VARCHAR(100) , mobile_number VARCHAR(10) , profile_picture VARCHAR(1000) ,,customer_type VARCHAR(1000),proof_of_verification VARCHAR(2000),gender VARCHAR(10))''',
         'posts' : '''create table if not exists posts (post_id CHAR(36) PRIMARY KEY, user_id CHAR(36),market_id CHAR(36),post_type VARCHAR(20) , post_url VARCHAR(1000),post_description VARCHAR(10000),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         'post_likes' : '''create table if not exists post_likes (post_id CHAR(36), user_id CHAR(36),market_id CHAR(36))''',
         'post_comments' : '''create table if not exists post_comments (post_id CHAR(36), user_id CHAR(36),market_id CHAR(36),comments VARCHAR(10000))''',

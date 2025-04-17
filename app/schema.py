@@ -9,6 +9,9 @@ class UserRequest(BaseModel):
     mobile_number : Optional[str] = None
     profile_picture : Optional[str] = None
     user_id : Optional[str] = None
+    customer_type : Optional[str] = None
+    proof_of_verification : Optional[str] = None
+    gender : Optional[str] = None 
 
 class UserPost(BaseModel):
     user_id : str
@@ -70,5 +73,9 @@ class OrdersRequest(BaseModel):
     date_of_delivery : Optional[str] = None
     order_status : Optional[str] = None
     order_id : Optional[str] = None
+    
+class ImageData(BaseModel) :
+    image_url : str
+    
 
 
