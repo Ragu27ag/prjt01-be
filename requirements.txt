@@ -4,3 +4,4 @@ aiomysql
 dotenv
 pydantic
 passlib[bcrypt]
+cryptography

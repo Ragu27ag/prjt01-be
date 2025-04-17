@@ -36,11 +36,13 @@ async def add_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
 
 async def update_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] : 
     query = f"""
-    update orders
+    update orders set
     """
 
     if user_body.order_status is not None :
-        query += f""" set order_status = '{user_body.order_status}'"""
+        query += f""" order_status = '{user_body.order_status}',"""
+    if user_body.date_of_delivery is not None :
+        query += f""" date_of_delivery = '{user_body.date_of_delivery}'"""
    
     
     query += f""" where product_id = '{user_body.product_id}' and order_id = '{user_body.order_id}'"""
@@ -89,8 +91,7 @@ async def get_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
             market_id,
             billing_address,
             date_of_delivery,
-            order_status, 
-            DATE_FORMAT(created_at, '%d/%m/%y %H:%i:%s')  AS created_at
+            order_status
         FROM orders
         """
     else :
@@ -105,8 +106,7 @@ async def get_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
            market_id,
            billing_address,
            date_of_delivery,
-           order_status,
-           DATE_FORMAT(created_at, '%d/%m/%y %H:%i:%s') AS created_at
+           order_status
     FROM orders
     WHERE market_id = %s
 """

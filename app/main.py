@@ -504,7 +504,7 @@ async def update_order(user_body:OrdersRequest) :
        return JSONResponse(
         status_code=200,
         content={
-            "message": "Posts"
+            "message": "Updated Successfully"
         }
     )
     else : 
