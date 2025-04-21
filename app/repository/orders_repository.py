@@ -38,11 +38,13 @@ async def update_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
     query = f"""
     update orders set
     """
-
+    count = 0
     if user_body.order_status is not None :
-        query += f""" order_status = '{user_body.order_status}',"""
+        query += f""" order_status = '{user_body.order_status}' """
+        count += 1
     if user_body.date_of_delivery is not None :
-        query += f""" date_of_delivery = '{user_body.date_of_delivery}'"""
+        if count == 0 : query +=  f""" date_of_delivery = '{user_body.date_of_delivery}'"""
+        else : query += f""" ,date_of_delivery = '{user_body.date_of_delivery}'""" 
    
     
     query += f""" where product_id = '{user_body.product_id}' and order_id = '{user_body.order_id}'"""
@@ -79,7 +81,7 @@ async def remove_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
 async def get_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] : 
     query = None
 
-    if user_body.market_id is None :
+    if user_body.market_id is None and user_body.user_id is None :
         query = """
         SELECT order_id,user_id,
             customer_name,
@@ -94,7 +96,23 @@ async def get_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
             order_status
         FROM orders
         """
-    else :
+    elif user_body.user_id is not None  :
+       query ="""
+    SELECT order_id, user_id,
+           customer_name,
+           product_name,
+           product_image_url,
+           product_price,
+           quantity,
+           product_id,
+           market_id,
+           billing_address,
+           date_of_delivery,
+           order_status
+    FROM orders
+    WHERE user_id = %s
+"""
+    elif user_body.market_id is not None  :
        query ="""
     SELECT order_id, user_id,
            customer_name,
@@ -116,6 +134,9 @@ async def get_orders(user_body : OrdersRequest,db_pool) -> Dict[str,str] :
             async with conn.cursor(aiomysql.DictCursor) as cursor:
                 if user_body.market_id is not None :
                     await cursor.execute(query, (user_body.market_id,))
+                    row = await cursor.fetchall()
+                elif user_body.user_id is not None :
+                    await cursor.execute(query, (user_body.user_id,))
                     row = await cursor.fetchall()
                 else :
                     await cursor.execute(query)

@@ -11,7 +11,7 @@ import os
 from uuid import uuid4
 from app.repository.market_repository import add_market, get_market, update_market
 from app.repository.orders_repository import add_orders, get_orders, update_orders
-from app.repository.product_repository import add_products, add_products_ratings, get_products, get_products_ratings, remove_products, update_products
+from app.repository.product_repository import add_products, add_products_ratings, get_products, get_products_by_product_id, get_products_ratings, remove_products, update_products
 from app.repository.user_repository import create_users, get_post_comment, get_post_likes, get_post_likes_count, get_user, get_user_post, login_user, post_comments, post_likes, user_post
 from fastapi.responses import JSONResponse, ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -87,6 +87,7 @@ async def addUser(user_body : UserRequest):
         status_code=200,
         content={
             "message": "Inserted Successfully",
+            "data" : res['data']
         }
     )
     else : 
@@ -228,7 +229,7 @@ async def add_post_comments(user_body:PostComments) :
        return JSONResponse(
         status_code=200,
         content={
-            "message": "Posts",
+            "message": "Comments",
         }
     )
     else : 
@@ -249,8 +250,12 @@ async def get_post_comments(user_body:PostComments) :
        print('posts',posts)
        final_dict = {}
        comments = await get_user(UserRequest(user_id=posts['user_id']), db_pool)
-       
-       final_dict = {**posts,**comments['data'][0]}
+       print('comments',comments)
+       if comments['data']:
+        final_dict = {**posts,**comments['data'][0]}
+       else :
+        final_dict = {**posts}
+          
 
        final_res.append(final_dict)
 
@@ -380,7 +385,7 @@ async def add_product_rating(user_body:ProductsRatingRequest) :
        return JSONResponse(
         status_code=200,
         content={
-            "message": "Posts"
+            "message": "Inserted Successfully"
         }
     )
     else : 
@@ -480,6 +485,17 @@ async def get_markets(user_body:MarketRequest) :
 @app.post('/api/v1/add-order')
 async def add_order(user_body:OrdersRequest) :
     res = await add_orders(user_body,db_pool)
+    pro_res = await get_products_by_product_id(user_body,db_pool)
+
+    print('pro res',pro_res['data'])
+
+    latest_stocks = float(pro_res['data'][0]['stocks']) - float(user_body.quantity)
+
+    print('latest_stocks',pro_res['data'][0]['stocks'],user_body.quantity,latest_stocks)
+
+    update_stock = await update_products(ProductsRequest(stocks=latest_stocks,product_id=user_body.product_id),db_pool)
+
+
 
     if res['error'] is None :
        return JSONResponse(
@@ -522,14 +538,43 @@ async def update_order(user_body:OrdersRequest) :
 async def get_order(user_body:OrdersRequest) :
     res = await get_orders(user_body,db_pool)
 
+    print('user_body.user_id is not None',user_body.user_id is not None)
+    final_res = []
+    if user_body.user_id is not None :
+        for posts in res['data'] :
+            print('posts',posts)
+            final_dict = {}
+            ratings = await get_products_ratings(ProductsRatingRequest(user_id=posts['user_id'],product_id=posts['product_id']), db_pool)
+            print('ratings',ratings)
+            if ratings['data'] :
+                final_dict = {**posts,**ratings['data'][0]}
+            else :
+                final_dict = {**posts}
+
+            
+            final_res.append(final_dict)
+    
+
+    print('final_res',final_res)
+
+
 
     if res['error'] is None :
-       return JSONResponse(
-        status_code=200,
-        content={
-            "message": "Posts",
-            "data":res['data']
-        }
+       if user_body.user_id is not None :
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Posts",
+                "data":final_res
+            })
+       else :
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Posts",
+                "data":res['data']
+            }
+        
     )
     else : 
       return JSONResponse(

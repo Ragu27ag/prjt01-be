@@ -49,8 +49,19 @@ async def create_users(user_body : UserRequest,db_pool) -> Dict[str,str] :
         async with db_pool.acquire() as conn:
             async with conn.cursor() as cursor:
                 await cursor.execute(query, values)
+
+        select_query = """
+        SELECT *
+        FROM users
+        WHERE email = %s
+    """
+
+        async with db_pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:
+                    await cursor.execute(select_query, (email,))
+                    row = await cursor.fetchall()
                 
-        return {'error' : None,'data': user_body}
+        return {'error' : None,'data': row}
     except Exception as e:
         return {'error' : str(e),'data': None}
     

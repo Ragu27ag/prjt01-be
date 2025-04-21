@@ -33,25 +33,25 @@ async def add_products(user_body : ProductsRequest,db_pool) -> Dict[str,str] :
 
 async def update_products(user_body : ProductsRequest,db_pool) -> Dict[str,str] : 
     query = f"""
-    update products
+    update products set
     """
 
     if user_body.product_name is not None :
-        query += f""" set product_name = '{user_body.product_name}'"""
+        query += f"""  product_name = '{user_body.product_name}',"""
     if user_body.product_description is not None :
-        query += f""" set product_description = '{user_body.product_description}'"""
+        query += f"""  product_description = '{user_body.product_description}',"""
     if user_body.manufacturer_name is not None :
-        query += f""" set manufacturer_name = '{user_body.manufacturer_name}'"""
+        query += f"""  manufacturer_name = '{user_body.manufacturer_name}',"""
     if user_body.manufacturer_address is not None :
-        query += f""" set manufacturer_address = '{user_body.manufacturer_address}'"""
+        query += f"""  manufacturer_address = '{user_body.manufacturer_address}',"""
     if user_body.product_image_url is not None :
-        query += f""" set product_image_url = '{user_body.product_image_url}'"""
+        query += f"""  product_image_url = '{user_body.product_image_url}',"""
     if user_body.product_price is not None :
-        query += f""" set product_price = '{user_body.product_price}'"""
+        query += f"""  product_price = '{user_body.product_price}',"""
     if user_body.stocks is not None :
-        query += f""" set stocks = '{user_body.stocks}'"""
+        query += f"""  stocks = '{user_body.stocks}'"""
     
-    query += f""" where product_id = '{user_body.product_id}' and user_id = '{user_body.user_id}'"""
+    query += f""" where product_id = '{user_body.product_id}'"""
 
     print('query',query)
 
@@ -87,7 +87,7 @@ async def get_products(user_body : ProductsRequest,db_pool) -> Dict[str,str] :
 
     if user_body.user_id is None :
         query = """
-        SELECT product_id,user_id ,
+        SELECT product_id,user_id ,market_id,
         product_name ,
         product_description ,
         manufacturer_name ,
@@ -99,7 +99,7 @@ async def get_products(user_body : ProductsRequest,db_pool) -> Dict[str,str] :
         """
     else :
          query = """
-        SELECT product_id,user_id ,
+        SELECT product_id,user_id ,market_id,
         product_name ,
         product_description ,
         manufacturer_name ,
@@ -127,7 +127,64 @@ async def get_products(user_body : ProductsRequest,db_pool) -> Dict[str,str] :
         return {'error' : str(e),'data': None}  
     
 
+async def get_products_by_product_id(user_body : ProductsRequest,db_pool) -> Dict[str,str] : 
+    
+
+   
+    query = """
+        SELECT product_id,user_id ,
+        product_name ,
+        product_description ,
+        manufacturer_name ,
+        manufacturer_address ,
+        product_image_url ,
+        product_price ,
+        stocks, DATE_FORMAT(created_at, '%%Y-%%m-%%dT%%H:%%i:%%s') AS created_at
+         FROM products where product_id = %s
+        """
+   
+
+    try:
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+              
+                    await cursor.execute(query, (user_body.product_id,))
+                    row = await cursor.fetchall()
+             
+    
+        print('row',row)
+                
+        return {'error' : None,'data': row}
+    except Exception as e:
+        return {'error' : str(e),'data': None}  
+    
+
 async def add_products_ratings(user_body : ProductsRatingRequest,db_pool) -> Dict[str,str] : 
+
+    select_query = """
+        SELECT *
+            FROM products_ratings where product_id = %s and user_id = %s
+        """
+
+        
+    async with db_pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:
+                        await cursor.execute(select_query, (user_body.product_id,user_body.user_id,))
+                        row = await cursor.fetchall()
+        
+    print('row',row)
+
+    if row is not None :
+        delete_query = """ delete
+            FROM products_ratings where product_id = %s and user_id = %s"""
+        
+        async with db_pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:
+                        await cursor.execute(delete_query, (user_body.product_id,user_body.user_id,))
+                        row = await cursor.fetchall()
+
+
+
     query = """
     INSERT INTO products_ratings (product_id,user_id ,
     star_rating,
