@@ -18,6 +18,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 async def create_users(user_body : UserRequest,db_pool) -> Dict[str,str] :
+
+    print('user body',user_body)
     
     email = user_body.email
     select_query = """
@@ -34,16 +36,31 @@ async def create_users(user_body : UserRequest,db_pool) -> Dict[str,str] :
     if row is not None :
         return {'error' : 'Email already exists','data': None}
     
+    aadhaar_number = user_body.aadhaar_number
+    aadh_select_query = """
+    SELECT *
+        FROM users
+        WHERE aadhaar_number = %s
+    """
+
+    async with db_pool.acquire() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(aadh_select_query, (aadhaar_number,))
+                aadh_row = await cursor.fetchone()
+    print('aadh row',aadh_row)
+    if aadh_row is not None :
+        return {'error' : 'Aadhaar already exists','data': None}
+    
     user_id = str(uuid4())
     print('user id',user_id)
     hashed_password = hash_password(user_body.password)
     
     query = """
-    INSERT INTO users (user_id, user_name, email, password, mobile_number, profile_picture,customer_type,proof_of_verification,gender)
-    VALUES (%s, %s, %s, %s, %s, %s,%s,%s,%s)
+    INSERT INTO users (user_id, user_name, email, password, mobile_number, profile_picture,customer_type,proof_of_verification,gender,aadhaar_number)
+    VALUES (%s, %s, %s, %s, %s, %s,%s,%s,%s,%s)
     """
 
-    values = (user_id,user_body.user_name,user_body.email,hashed_password,user_body.mobile_number,user_body.profile_picture,user_body.customer_type,user_body.proof_of_verification,user_body.gender)
+    values = (user_id,user_body.user_name,user_body.email,hashed_password,user_body.mobile_number,user_body.profile_picture,user_body.customer_type,user_body.proof_of_verification,user_body.gender,user_body.aadhaar_number)
 
     try:
         async with db_pool.acquire() as conn:

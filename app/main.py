@@ -615,7 +615,7 @@ async def get_order(imageData : ImageData) :
 @app.get('/api/v1/create-tables')
 async def create_tables():
     tables = {
-        'users' : '''create table if not exists users (user_id CHAR(36) PRIMARY KEY,user_name VARCHAR(100) , email VARCHAR(100) , password VARCHAR(100) , mobile_number VARCHAR(10) , profile_picture VARCHAR(1000) ,customer_type VARCHAR(1000),proof_of_verification VARCHAR(2000),gender VARCHAR(10))''',
+        'users' : '''create table if not exists users (user_id CHAR(36) PRIMARY KEY,user_name VARCHAR(100) , email VARCHAR(100) , password VARCHAR(100) , mobile_number VARCHAR(10) , profile_picture VARCHAR(1000) ,customer_type VARCHAR(1000),proof_of_verification VARCHAR(2000),gender VARCHAR(10)),aadhaar_number VARCHAR(100)''',
         'posts' : '''create table if not exists posts (post_id CHAR(36) PRIMARY KEY, user_id CHAR(36),market_id CHAR(36),post_type VARCHAR(20) , post_url VARCHAR(1000),post_description VARCHAR(10000),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         'post_likes' : '''create table if not exists post_likes (post_id CHAR(36), user_id CHAR(36),market_id CHAR(36))''',
         'post_comments' : '''create table if not exists post_comments (post_id CHAR(36), user_id CHAR(36),market_id CHAR(36),comments VARCHAR(10000))''',

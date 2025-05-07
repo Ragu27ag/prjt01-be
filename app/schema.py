@@ -12,6 +12,7 @@ class UserRequest(BaseModel):
     customer_type : Optional[str] = None
     proof_of_verification : Optional[str] = None
     gender : Optional[str] = None 
+    aadhaar_number : Optional[str] = None 
 
 class UserPost(BaseModel):
     user_id : str

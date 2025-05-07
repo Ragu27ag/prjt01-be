@@ -6,6 +6,7 @@ from PIL import Image
 from io import BytesIO
 import numpy as np
 import httpx
+import re
 
 
 async def identify_gender(imageData : ImageData) -> Dict[str,Union[List[str],bool]] : 
@@ -38,6 +39,13 @@ async def identify_gender(imageData : ImageData) -> Dict[str,Union[List[str],boo
         identifier = ['aadhaar','female']
         lower_extracted_texts = [word.lower() if isinstance(word,str) and not  word.isdigit() else word for word in extracted_texts ]
         print('lower_extracted_texts',lower_extracted_texts)
+
+        aadhaar_pattern = re.compile(r'\b\d{4}\s\d{4}\s\d{4}\b')
+
+        aadhaar_numbers = [match.group() for text in lower_extracted_texts for match in aadhaar_pattern.finditer(text)]
+
+        print("Extracted Aadhaar number(s):", aadhaar_numbers)
+
         missing = [word.lower() for word in identifier if word.lower() not in lower_extracted_texts ]
         print('missing',missing)
         if not missing :
@@ -57,6 +65,7 @@ async def identify_gender(imageData : ImageData) -> Dict[str,Union[List[str],boo
         return {'extracted_texts' : extracted_texts,
                 'isFemale' : isFemale,
                 'isAdhaar':isAdhaar,
+                'addhaar_number' : aadhaar_numbers[0],
                 'error':None}
  except Exception as e :
      return {'error':str(e)}
